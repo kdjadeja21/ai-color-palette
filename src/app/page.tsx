@@ -1,113 +1,129 @@
-import Image from 'next/image'
+"use client";
+
+import React, { useState } from "react";
+import { Configuration, OpenAIApi } from "openai";
+import ApiButton from "./components/ApiButton";
+import { SnackbarProvider, enqueueSnackbar } from "notistack";
 
 export default function Home() {
+  const [apiKey, setApiKey] = useState("");
+  const [companyName, setCompanyName] = useState("Twitter");
+  const [loading, setLoading] = useState(false);
+  const [colors, setColors] = useState([
+    "#1DA1F2",
+    "#14171A",
+    "#657786",
+    "#AAB8C2",
+    "#E1E8ED",
+    "#F5F8FA",
+  ]); // Twitter default
+
+  const callChatGPT = async () => {
+    setLoading(true);
+    const config = new Configuration({
+      apiKey: apiKey,
+    });
+    const openapi = new OpenAIApi(config);
+    try {
+      const response = await openapi.createChatCompletion({
+        model: "gpt-3.5-turbo-16k",
+        messages: [
+          {
+            role: "user",
+            content: `What are the hex color codes for ${companyName}'s logo in just a single-line JavaScript array with no other explanations or variable name?`,
+          },
+        ],
+      });
+
+      const unparsedColors =
+        response.data.choices[0].message?.content?.replaceAll(`'`, `"`);
+      const parsedColors = JSON.parse(unparsedColors ?? "");
+      // remove duplicates
+      setColors(Array.from(new Set(parsedColors)));
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.log("Unable to parse that company response");
+    }
+  };
+
+  const copyToClipboard = (color: string): void => {
+    navigator.clipboard.writeText(color).then(
+      function () {
+        enqueueSnackbar("Copying to clipboard was successful!");
+        console.log("Async: Copying to clipboard was successful!");
+      },
+      function (err) {
+        console.error("Async: Could not copy text: ", err);
+      }
+    );
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+    <div>
+      <SnackbarProvider
+        anchorOrigin={{ horizontal: "center", vertical: "top" }}
+      />
+      <ApiButton
+        apiKey={apiKey}
+        onApiKeyUpdate={(key: string) => setApiKey(key)}
+      />
+      <div className="fixed top-20 lg:top-10 left-1/2 -translate-x-1/2">
+        <div className="h-12 w-full rounded-md bg-gradient-to-r from-[#C6FFDD] via-[#FBD786] to-[#f7797d] p-1">
+          <div className="relative">
+            <input
+              type="text"
+              onChange={(e) => setCompanyName(e.target.value)}
+              value={companyName}
+              className="py-2 px-4 pr-[4.5rem] w-80 lg:w-96 focus:outline-none rounded"
+              placeholder="Company name (e.g. Twitter)"
+              onKeyDown={(e) => (e.key === "Enter" ? callChatGPT() : null)}
             />
-          </a>
+            <kbd
+              className="absolute top-1/2 -translate-y-1/2 right-2 cursor-pointer px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg"
+              onClick={() => callChatGPT()}
+            >
+              Enter
+            </kbd>
+          </div>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+      {loading ? (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          Loading...
+        </div>
+      ) : (
+        <div
+          className="grid justify-between w-screen h-screen"
+          style={{
+            gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
+          }}
         >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+          {colors.map((color) => (
+            <div
+              className="h-screen flex justify-center items-center"
+              style={{ backgroundColor: color }}
+              key={color}
+            >
+              <div
+                className="flex items-center px-4 py-2 bg-slate-800 bg-opacity-50 cursor-pointer rotate-90 md:rotate-0"
+                onClick={() => copyToClipboard(color)}
+              >
+                {/* <!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --> */}
+                <svg
+                  className="mr-3 fill-gray-100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="1em"
+                  viewBox="0 0 384 512"
+                >
+                  <path d="M192 0c-41.8 0-77.4 26.7-90.5 64H64C28.7 64 0 92.7 0 128V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V128c0-35.3-28.7-64-64-64H282.5C269.4 26.7 233.8 0 192 0zm0 64a32 32 0 1 1 0 64 32 32 0 1 1 0-64zM112 192H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z" />
+                </svg>
+                <span className="text-white">{color}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
