@@ -50,10 +50,14 @@ export default function Home() {
   const copyToClipboard = (color: string): void => {
     navigator.clipboard.writeText(color).then(
       function () {
-        enqueueSnackbar("Copying to clipboard was successful!");
-        console.log("Async: Copying to clipboard was successful!");
+        enqueueSnackbar("Color code copied successfully!", {
+          variant: "success",
+        });
       },
       function (err) {
+        enqueueSnackbar("Could not copy color!", {
+          variant: "error",
+        });
         console.error("Async: Could not copy text: ", err);
       }
     );
@@ -62,7 +66,7 @@ export default function Home() {
   return (
     <div>
       <SnackbarProvider
-        anchorOrigin={{ horizontal: "center", vertical: "top" }}
+        anchorOrigin={{ horizontal: "left", vertical: "top" }}
       />
       <ApiButton
         apiKey={apiKey}
